@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, user-scalable=yes, viewport-fit=cover">
 <meta name="theme-color" content="#090b13">
-<title>NOIR Music Player 5.0</title>
+<title>NOIR Music Player 5.2</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap');
 :root{--bg:#090b13;--panel:#111522;--panel2:#171c2b;--line:#262d40;--muted:#929bb1;--text:#f5f6fb;--a:#a78bfa;--b:#5eead4;--pink:#f0abfc}
@@ -88,6 +88,29 @@ body.v2-mode .v2-audio-dock{position:fixed;z-index:60;left:10px;right:10px;botto
  .v2-audio-dock{left:7px;right:7px;gap:6px;padding:8px}
  .v2-audio-dock button{min-width:30px;padding:8px 5px}
 }
+
+/* Immersive NOIR Shorts viewer */
+.noir-shorts-viewer{display:none;position:fixed;inset:0;z-index:99999;background:#000;color:#fff;overflow:hidden;overscroll-behavior:none;touch-action:none}
+.noir-shorts-viewer.open{display:block}
+.noir-shorts-stage{position:absolute;inset:0;width:100%;height:100%;height:100dvh;background:#000;overflow:hidden;touch-action:none}
+.noir-shorts-player{position:absolute;inset:0;width:100%;height:100%;background:#000}
+.noir-shorts-player iframe{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;border:0!important}
+.noir-shorts-gesture{position:absolute;left:0;top:0;bottom:0;width:17%;z-index:2;background:transparent;touch-action:none}.noir-shorts-gesture-right{left:auto;right:0}
+.noir-shorts-top{position:absolute;top:calc(12px + env(safe-area-inset-top));left:14px;right:14px;z-index:4;display:flex;align-items:center;gap:12px;text-shadow:0 2px 8px #000}
+.noir-shorts-brand{font:800 13px 'Space Grotesk';letter-spacing:2px;flex:1}
+.noir-shorts-brand b{color:#1ed760}
+#noirShortsCount{font-size:12px;font-weight:700;background:#0008;padding:7px 10px;border-radius:20px}
+.noir-shorts-top button{width:42px;height:42px;border-radius:50%;background:#0009;color:#fff;font-size:30px;line-height:1}
+.noir-shorts-hint{position:absolute;bottom:calc(18px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);z-index:4;background:#0008;padding:9px 13px;border-radius:20px;font-size:11px;white-space:nowrap;pointer-events:none;text-shadow:0 1px 4px #000}
+.noir-shorts-controls{position:absolute;right:12px;bottom:calc(72px + env(safe-area-inset-bottom));z-index:5;display:flex;flex-direction:column;gap:10px}
+.noir-shorts-controls button{width:42px;height:42px;border-radius:50%;background:#0009;border:1px solid #ffffff55;color:white;font-size:20px}
+.noir-shorts-loading{position:absolute;inset:0;z-index:3;display:grid;place-items:center;background:#0008;color:#fff;font-size:14px;pointer-events:none}
+.noir-shorts-play{position:absolute;z-index:6;left:50%;top:50%;transform:translate(-50%,-50%);padding:15px 20px;border-radius:28px;background:#1ed760;color:#061109;font-weight:800;box-shadow:0 8px 30px #0008}
+body.noir-shorts-open{position:fixed!important;inset:0!important;width:100%!important;height:100%!important;overflow:hidden!important;overscroll-behavior:none!important;touch-action:none!important}
+body.noir-shorts-open>*:not(#noirShortsViewer){visibility:hidden!important;pointer-events:none!important}
+body.noir-shorts-open #noirShortsViewer{visibility:visible!important;pointer-events:auto!important}
+@media(orientation:landscape){.noir-shorts-stage{width:100vw;height:100dvh}}
+
 </style>
 </head>
 <body>
@@ -97,7 +120,8 @@ body.v2-mode .v2-audio-dock{position:fixed;z-index:60;left:10px;right:10px;botto
   <div class="menu-wrap"><button class="head-icon" id="menuToggle" aria-label="Menu">⋮</button><div class="popup" id="menuPopup">
     <button class="popup-item" id="openUpload">＋ Upload Musik</button>
     <button class="popup-item" id="openV2">✦ Dashboard v2 <span>›</span></button>
-    <div class="popup-note">Dashboard utama tetap tersedia. v2 memakai YouTube Embed dan fitur berbagi.</div>
+    <button class="popup-item" id="openShortsMain">▣ Play Shorts <span>›</span></button>
+    <div class="popup-note">Play Shorts membuka pemutar video vertikal langsung di NOIR.</div>
   </div></div>
   <div class="brand"><div class="logo">♫</div>NOIR<span style="color:var(--b)">.</span></div>
 </div>
@@ -138,7 +162,7 @@ body.v2-mode .v2-audio-dock{position:fixed;z-index:60;left:10px;right:10px;botto
     <aside class="v2-side">
       <div class="v2-sidebrand">NOIR<span>+</span></div>
       <button class="v2-sideitem active" data-v2tab="home">⌂ <span>Beranda</span></button>
-      <button class="v2-sideitem" data-v2tab="youtube">▣ <span>YouTube Player</span></button>
+      <button class="v2-sideitem" id="openShortsMenu" type="button">▣ <span>Play Shorts</span></button>
       <button class="v2-sideitem" data-v2tab="library">♫ <span>Library Lokal</span></button>
       <div class="v2-side-label">KOLEKSI KAMU</div>
       <button class="v2-sideitem" data-v2tab="saved">♡ <span>Disukai</span></button>
@@ -148,22 +172,10 @@ body.v2-mode .v2-audio-dock{position:fixed;z-index:60;left:10px;right:10px;botto
       <div class="v2-top"><div><div class="v2-kicker">NOIR MUSIC EXPERIENCE</div><h1 id="v2Heading">Dengarkan tanpa batas.</h1></div><button class="v2-back" id="backMain">← Dashboard utama</button></div>
       <section class="v2-panel active" id="v2home">
         <div class="v2-feature">
-          <div><span class="v2-pill">YOUTUBE INTEGRATION</span><h2>Semua musik,<br>di satu ruang.</h2><p>Putar video musik langsung dari YouTube melalui pemutar resmi yang disematkan.</p><button class="v2-cta" id="goYoutube">Mulai dengarkan ↗</button></div>
+          <div><span class="v2-pill">NOIR SHORTS</span><h2>Video pendek,<br>layar penuh.</h2><p>Nikmati Shorts langsung di dalam NOIR. Geser ke atas atau bawah untuk berpindah video.</p><button class="v2-cta" id="goShorts">▶ Play Shorts</button></div>
           <div class="v2-feature-art"><div class="v2-disc">♫</div><span>NOIR SESSION</span></div>
         </div>
         <div class="v2-section-head"><h2>Putar dari koleksi lokal</h2><span>NOIR LIBRARY</span></div><div class="v2-track-grid" id="v2HomeTracks"></div>
-        <div class="v2-section-head"><h2>Jelajahi YouTube</h2><span>SEARCH</span></div>
-        <div class="v2-searchrow"><input id="v2Search" placeholder="Cari lagu, artis, atau video di YouTube..."><button id="v2SearchBtn">Cari di YouTube</button></div>
-      </section>
-      <section class="v2-panel" id="v2youtube">
-        <div class="v2-player-layout">
-          <div><div id="v2VideoSlot" class="v2-video-slot"><div class="v2-video-empty">YouTube player siap. Tempel link, lalu tekan Putar.</div></div>
-            <div class="v2-yt-controls"><button id="v2PlayPause" type="button">▶ Play</button><div class="v2-progress-wrap"><input id="v2Progress" type="range" min="0" max="1000" value="0" step="1" aria-label="Posisi video"><div class="v2-time"><span id="v2Elapsed">0:00</span><span id="v2Duration">0:00</span></div></div><button id="v2ShowVideo" type="button">Show Video</button></div>
-            <div class="v2-nowrow"><div><div class="v2-kicker">NOW PLAYING IN V2</div><h2 id="v2NowTitle">Belum ada video dipilih</h2><p id="v2NowSub">YouTube Embed Player</p></div><button class="v2-share" id="v2Share">↗ Share</button></div>
-            <div class="v2-addbox"><label for="v2YoutubeUrl">LINK YOUTUBE / VIDEO ID</label><div class="v2-searchrow"><input id="v2YoutubeUrl" placeholder="https://www.youtube.com/watch?v=..."><button id="v2LoadYoutube">Putar</button></div><small>Gunakan link video publik yang mengizinkan embedding. Video privat, dibatasi wilayah, atau pemilik yang menonaktifkan embed tidak dapat diputar di sini.</small></div>
-          </div>
-          <aside class="v2-queue"><div class="v2-section-head"><h3>Queue</h3><span id="v2QueueCount">0 ITEM</span></div><div id="v2QueueList" class="v2-queue-list"><p>Belum ada video dalam antrean.</p></div><button class="v2-outline" id="v2OpenSearch">Cari musik di YouTube ↗</button></aside>
-        </div>
       </section>
       <section class="v2-panel" id="v2library"><div class="v2-section-head"><h2>Library lokal</h2><span id="v2LibraryCount">0 TRACKS</span></div><div id="v2LocalTracks" class="v2-local-list"></div></section>
       <section class="v2-panel" id="v2saved"><div class="v2-section-head"><h2>Musik disukai</h2><span>YOUR SAVED TRACKS</span></div><div id="v2SavedTracks" class="v2-local-list"></div></section>
@@ -176,6 +188,24 @@ body.v2-mode .v2-audio-dock{position:fixed;z-index:60;left:10px;right:10px;botto
 </section>
 </div>
 <div id="v2PlayerParking" hidden></div>
+<div id="noirShortsViewer" class="noir-shorts-viewer" aria-hidden="true">
+  <div class="noir-shorts-stage">
+    <div id="noirShortsPlayer" class="noir-shorts-player"></div><div id="noirShortsGesture" class="noir-shorts-gesture"></div><div id="noirShortsGestureRight" class="noir-shorts-gesture noir-shorts-gesture-right"></div>
+    <div id="noirShortsLoading" class="noir-shorts-loading">Menyiapkan Shorts…</div>
+    <button id="noirShortsPlay" class="noir-shorts-play" type="button" hidden>▶ Sentuh untuk memutar</button>
+    <div class="noir-shorts-top">
+      <span class="noir-shorts-brand">NOIR <b>SHORTS</b></span>
+      <span id="noirShortsCount">1 / 5</span>
+      <button id="noirShortsClose" type="button" aria-label="Keluar dari Play Shorts">×</button>
+    </div>
+    <div class="noir-shorts-hint" id="noirShortsHint">Geser vertikal dari sisi layar untuk berpindah video</div>
+    <div class="noir-shorts-controls">
+      <button id="noirShortsPrev" type="button" aria-label="Video sebelumnya">↑</button>
+      <button id="noirShortsNext" type="button" aria-label="Video berikutnya">↓</button>
+    </div>
+  </div>
+</div>
+
 <div class="bottom"><div class="playerbar"><div class="bar-art"></div><div class="bar-info"><strong id="barTitle">Belum ada lagu diputar</strong><span id="barArtist">NOIR • Local Music</span></div><div class="bar-controls"><button id="barBack" title="Mundur 10 detik">−10</button><button class="playmini" id="barPlay">▶</button><button id="barForward" title="Maju 10 detik">+10</button></div></div></div>
 <div class="toast" id="toast"></div><audio id="audio" preload="metadata"></audio><video id="video" preload="metadata" playsinline style="display:none"></video>
 <script>
@@ -204,7 +234,7 @@ async function requestPersistentStorage(){try{if(navigator.storage&&navigator.st
 async function init(){try{db=await openDB();let results=await Promise.all([dbAll(),readAll(SAVED)]);tracks=[...seed,...results[0].filter(x=>x.source==='upload')];savedIds=new Set(results[1].map(x=>x.id));await requestPersistentStorage()}catch(e){toast('Penyimpanan lokal gagal dibuka. Periksa izin dan ruang penyimpanan browser.')}render();$('trackTotal').textContent=tracks.length+' TRACKS'}
 function media(){return current?.kind==='video'?video:audio}
 function stopReverse(){if(reverseNode){try{reverseNode.stop()}catch(e){}reverseNode.disconnect();reverseNode=null}if(reverseCtx){reverseCtx.close().catch(()=>{});reverseCtx=null}isReverse=false;$('reverseBtn').classList.remove('reverse-state')}
-function setCurrent(t,autoplay=true){stopReverse();audio.pause();video.pause();current=t;let el=t.kind==='video'?video:audio;$('v2AudioTitle').textContent=t.title;$('v2AudioArtist').textContent=t.artist||'Tidak diketahui';$('v2NowTitle').textContent=t.title;$('v2NowSub').textContent=(t.artist||'Artis tidak diketahui')+' · Koleksi NOIR';audio.removeAttribute('src');video.removeAttribute('src');el.src=t.url;el.load();$('currentTitle').textContent=t.title;$('currentArtist').textContent=t.artist||'Tidak diketahui';renderLyrics(t);$('barTitle').textContent=t.title;$('barArtist').textContent=t.artist||'Tidak diketahui';$('sourceTag').textContent=t.source==='upload'?'DEVICE FILE':t.source==='bundle'?'NOIR BUNDLED AUDIO':t.source==='catbox'?'CATBOX STREAM':'URL STREAM';$('mainPlay').textContent='▶';$('barPlay').textContent='▶';$('reverseHint').textContent='Reverse tersedia untuk file yang bisa diproses browser. Link eksternal bergantung izin CORS server sumber.';render();if(autoplay)el.play().then(updateButtons).catch(()=>toast('Browser menolak pemutaran. Tekan tombol Play atau cek URL.'))}
+function setCurrent(t,autoplay=true){stopReverse();audio.pause();video.pause();current=t;let el=t.kind==='video'?video:audio;$('v2AudioTitle').textContent=t.title;$('v2AudioArtist').textContent=t.artist||'Tidak diketahui';audio.removeAttribute('src');video.removeAttribute('src');el.src=t.url;el.load();$('currentTitle').textContent=t.title;$('currentArtist').textContent=t.artist||'Tidak diketahui';renderLyrics(t);$('barTitle').textContent=t.title;$('barArtist').textContent=t.artist||'Tidak diketahui';$('sourceTag').textContent=t.source==='upload'?'DEVICE FILE':t.source==='bundle'?'NOIR BUNDLED AUDIO':t.source==='catbox'?'CATBOX STREAM':'URL STREAM';$('mainPlay').textContent='▶';$('barPlay').textContent='▶';$('reverseHint').textContent='Reverse tersedia untuk file yang bisa diproses browser. Link eksternal bergantung izin CORS server sumber.';render();if(autoplay)el.play().then(updateButtons).catch(()=>toast('Browser menolak pemutaran. Tekan tombol Play atau cek URL.'))}
 function updateButtons(){let p=!media().paused;$('mainPlay').textContent=p?'Ⅱ':'▶';$('barPlay').textContent=p?'Ⅱ':'▶'}
 function toggle(){if(!current){toast('Pilih lagu dulu dari daftar musik.');return}let el=media();if(el.paused)el.play().then(updateButtons).catch(()=>toast('Tidak bisa memutar file ini.'));else{el.pause();updateButtons()}}
 function stop(){if(!current)return;stopReverse();let el=media();el.pause();el.currentTime=0;updateButtons()}
@@ -276,93 +306,115 @@ document.addEventListener('wheel',e=>{if(e.ctrlKey)e.preventDefault()},{passive:
 document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&['+','=','-','0'].includes(e.key))e.preventDefault()});
 
 
-// Dashboard v2: independent YouTube iframe experience; original dashboard remains intact.
-let v2Current=null,v2Queue=[],v2YTPlayer=null,v2YTReady=false,v2YTRequested=false,v2ProgressTimer=null,v2Seeking=false,v2PlayerWrap=null,v2PendingId=null;
-function v2VideoId(input){
-  const raw=(input||'').trim(); if(/^[\w-]{11}$/.test(raw))return raw;
-  try{const u=new URL(raw);if(u.hostname.includes('youtu.be'))return u.pathname.split('/').filter(Boolean)[0]||null;
-    if(u.hostname.includes('youtube.com')||u.hostname.includes('youtube-nocookie.com')){if(u.searchParams.get('v'))return u.searchParams.get('v');const m=u.pathname.match(/\/(?:embed|shorts|live)\/([\w-]{11})/);return m?m[1]:null;}}
-  catch(e){} return null;
-}
-function v2FormatTime(sec){if(!Number.isFinite(sec)||sec<0)return '0:00';sec=Math.floor(sec);return Math.floor(sec/60)+':'+String(sec%60).padStart(2,'0')}
-function v2MountPlayer(){
- const slot=$('v2VideoSlot'),parking=$('v2PlayerParking');
- if(!v2PlayerWrap){v2PlayerWrap=document.createElement('div');v2PlayerWrap.className='v2-video-wrap v2-video-collapsed';v2PlayerWrap.innerHTML='<div class="v2-video-placeholder" id="v2Placeholder"><div class="v2-playmark">▶</div><b>YouTube Player</b><span>Tekan Putar untuk memulai video.</span></div><div id="v2YoutubeFrame"></div>';parking.appendChild(v2PlayerWrap);}
- if(slot&&!slot.contains(v2PlayerWrap))slot.replaceChildren(v2PlayerWrap);
-}
-function v2LoadApi(){
- if(v2YTRequested)return;v2YTRequested=true;
- window.onYouTubeIframeAPIReady=function(){v2YTReady=true;v2CreatePlayer()};
- const script=document.createElement('script');script.src='https://www.youtube.com/iframe_api';script.async=true;document.head.appendChild(script);
-}
-function v2CreatePlayer(){
- if(!v2YTReady||v2YTPlayer)return;
- v2MountPlayer();
- v2YTPlayer=new YT.Player('v2YoutubeFrame',{width:'100%',height:'100%',videoId:'',playerVars:{autoplay:0,controls:0,playsinline:1,enablejsapi:1,origin:location.origin,rel:0,iv_load_policy:3,fs:1},events:{onReady:()=>{ $('v2PlayPause').disabled=false;if(v2PendingId){v2YTPlayer.cueVideoById(v2PendingId);$('v2PlayPause').textContent='▶ Play video';v2PendingId=null;toast('Video siap. Tekan Play untuk mulai.');} },onStateChange:e=>{const playing=e.data===YT.PlayerState.PLAYING;$('v2PlayPause').textContent=playing?'Ⅱ Pause':'▶ Play';if(e.data===YT.PlayerState.ENDED)$('v2PlayPause').textContent='↻ Replay';},onError:e=>toast('YouTube tidak dapat memutar video ini (kode '+e.data+').')}});
-}
-function v2PlayYoutube(input,title){
- const id=v2VideoId(input);if(!id){toast('Link YouTube tidak valid. Tempel URL video atau ID 11 karakter.');return}
- v2Current={id,url:'https://www.youtube.com/watch?v='+id,title:title||'YouTube video'};
- $('v2NowTitle').textContent=v2Current.title;$('v2NowSub').textContent='YouTube · Embedded player';
- if(!v2Queue.some(x=>x.id===id))v2Queue.unshift(v2Current);
- v2RenderQueue();v2Tab('youtube');v2MountPlayer();v2PlayerWrap.classList.remove('v2-video-collapsed');$('v2ShowVideo').textContent='Video ditampilkan';v2LoadApi();
- // If the API is ready, this click is the playback gesture. Otherwise cue only;
- // the user must press the visible Play control after the player becomes ready.
- if(v2YTPlayer&&typeof v2YTPlayer.loadVideoById==='function'){
-   v2YTPlayer.loadVideoById(id);$('v2PlayPause').textContent='Ⅱ Pause';
- }else{
-   v2PendingId=id;$('v2PlayPause').textContent='▶ Play video';
- }
 
+// NOIR Shorts: official YouTube IFrame Player, immersive single-screen viewer.
+const noirShortsIds=['rKfdySr5q8E','WyDZwpNI8aI','Vtgpe_aN9v8','vkEGgueNM8E','DmH2oMJkrXg'];
+let noirShortsIndex=0,noirShortsPlayer=null,noirShortsApiReady=false,noirShortsApiRequested=false;
+let noirShortsPending=false,noirShortsTouchY=0,noirShortsTouchX=0,noirShortsWheelLock=0,noirShortsMovedAt=0;
+function noirShortsLoadApi(){
+ if(noirShortsApiRequested)return;noirShortsApiRequested=true;
+ const previous=window.onYouTubeIframeAPIReady;
+ window.onYouTubeIframeAPIReady=function(){if(typeof previous==='function')previous();noirShortsApiReady=true;noirShortsCreatePlayer();};
+ if(window.YT&&window.YT.Player){noirShortsApiReady=true;noirShortsCreatePlayer();return;}
+ const s=document.createElement('script');s.src='https://www.youtube.com/iframe_api';s.async=true;document.head.appendChild(s);
 }
-function v2TogglePlay(){
- if(!v2YTPlayer||!v2Current){toast('Pilih video YouTube terlebih dahulu.');return}
- const state=v2YTPlayer.getPlayerState();if(state===YT.PlayerState.PLAYING)v2YTPlayer.pauseVideo();else if(state===YT.PlayerState.ENDED)v2YTPlayer.seekTo(0,true),v2YTPlayer.playVideo();else v2YTPlayer.playVideo();
+function noirShortsCreatePlayer(){
+ if(!noirShortsApiReady||noirShortsPlayer)return;
+ noirShortsPlayer=new YT.Player('noirShortsPlayer',{
+  width:'100%',height:'100%',videoId:'',
+  playerVars:{autoplay:0,controls:1,playsinline:1,enablejsapi:1,origin:location.origin,rel:0,iv_load_policy:3,fs:1,disablekb:0},
+  events:{
+   onReady:()=>{if(noirShortsPending){noirShortsPlayer.cueVideoById(noirShortsIds[noirShortsIndex]);$('noirShortsLoading').textContent='Video siap';$('noirShortsPlay').hidden=false;}},
+   onStateChange:e=>{
+    if(e.data===YT.PlayerState.PLAYING){$('noirShortsLoading').style.display='none';$('noirShortsPlay').hidden=true;}
+    if(e.data===YT.PlayerState.BUFFERING){$('noirShortsLoading').style.display='grid';$('noirShortsLoading').textContent='Memuat video…';}
+    if(e.data===YT.PlayerState.ENDED){noirShortsNext(1,true);}
+    if(e.data===YT.PlayerState.PAUSED){$('noirShortsPlay').hidden=false;$('noirShortsPlay').textContent='▶ Lanjutkan';}
+   },
+   onError:e=>{$('noirShortsLoading').style.display='grid';$('noirShortsLoading').textContent='Video tidak dapat disematkan (kode '+e.data+'). Geser ke video berikutnya.';}
+  }
+ });
 }
-function v2PollProgress(){
- if(v2ProgressTimer)clearInterval(v2ProgressTimer);
- v2ProgressTimer=setInterval(()=>{
-  if(!v2YTPlayer||typeof v2YTPlayer.getCurrentTime!=='function'||v2Seeking)return;
-  try{const now=v2YTPlayer.getCurrentTime()||0,dur=v2YTPlayer.getDuration()||0;$('v2Elapsed').textContent=v2FormatTime(now);$('v2Duration').textContent=v2FormatTime(dur);if(dur>0)$('v2Progress').value=Math.round(now/dur*1000);}catch(e){}
- },250);
+function noirShortsOpen(){
+ const viewer=$('noirShortsViewer');if(viewer.classList.contains('open'))return;
+ history.pushState({noirShorts:true},'',location.href);
+ document.body.classList.add('noir-shorts-open');viewer.classList.add('open');viewer.setAttribute('aria-hidden','false');
+ noirShortsIndex=0;$('noirShortsCount').textContent='1 / '+noirShortsIds.length;
+ $('noirShortsLoading').style.display='grid';$('noirShortsLoading').textContent='Menyiapkan Shorts…';
+ $('noirShortsPlay').hidden=true;noirShortsPending=true;noirShortsLoadApi();
+ if(noirShortsPlayer&&typeof noirShortsPlayer.loadVideoById==='function'){
+  noirShortsPlayer.loadVideoById(noirShortsIds[0]);noirShortsPending=false;
+ }else if(noirShortsPlayer&&typeof noirShortsPlayer.cueVideoById==='function'){
+  noirShortsPlayer.cueVideoById(noirShortsIds[0]);noirShortsPending=false;$('noirShortsPlay').hidden=false;
+ }
+ // Request native fullscreen from the actual tap. Browser may reject it in WebView.
+ const fsTarget=viewer;
+ if(fsTarget.requestFullscreen){const req=fsTarget.requestFullscreen();if(req&&req.catch)req.catch(()=>{});}
 }
-function v2RenderQueue(){
- const q=$('v2QueueList');q.innerHTML='';$('v2QueueCount').textContent=v2Queue.length+' ITEM';
- if(!v2Queue.length){q.innerHTML='<p>Belum ada video dalam antrean.</p>';return}
- v2Queue.forEach((x,i)=>{const row=document.createElement('div');row.className='v2-queue-item';row.innerHTML='<div><b></b><small>YouTube video</small></div><button title="Putar">▶</button>';row.querySelector('b').textContent=x.title;row.querySelector('button').onclick=()=>v2PlayYoutube(x.id,x.title);q.appendChild(row)});
+function noirShortsClose(fromHistory=false){
+ const viewer=$('noirShortsViewer');if(!viewer.classList.contains('open'))return;
+ if(!fromHistory&&history.state&&history.state.noirShorts){history.back();return;}
+ viewer.classList.remove('open');viewer.setAttribute('aria-hidden','true');document.body.classList.remove('noir-shorts-open');
+ try{noirShortsPlayer?.pauseVideo();}catch(e){}
+ if(document.fullscreenElement&&document.exitFullscreen){document.exitFullscreen().catch(()=>{});}
+ if(!fromHistory&&history.state&&history.state.noirShorts)history.back();
+}
+function noirShortsPlay(){
+ if(!noirShortsPlayer){noirShortsPending=true;noirShortsLoadApi();return;}
+ $('noirShortsLoading').style.display='grid';$('noirShortsLoading').textContent='Memuat video…';
+ $('noirShortsPlay').hidden=true;
+ try{noirShortsPlayer.playVideo();}catch(e){}
+}
+function noirShortsNext(direction=1,auto=false){
+ if(!noirShortsPlayer)return;
+ noirShortsIndex=(noirShortsIndex+direction+noirShortsIds.length)%noirShortsIds.length;
+ $('noirShortsCount').textContent=(noirShortsIndex+1)+' / '+noirShortsIds.length;
+ $('noirShortsLoading').style.display='grid';$('noirShortsLoading').textContent='Memuat Shorts '+(noirShortsIndex+1)+'…';
+ $('noirShortsPlay').hidden=true;
+ // loadVideoById continues playback; after the fifth item, index wraps to item one.
+ noirShortsPlayer.loadVideoById(noirShortsIds[noirShortsIndex]);
+}
+function noirShortsHandleGesture(delta){
+ if(Math.abs(delta)<35)return;
+ noirShortsNext(delta<0?1:-1);
 }
 function v2Tab(name){
- if(name==='youtube'){v2MountPlayer();}else if(v2PlayerWrap&&$('v2PlayerParking')&&!$('v2PlayerParking').contains(v2PlayerWrap))$('v2PlayerParking').appendChild(v2PlayerWrap);
- document.querySelectorAll('.v2-sideitem').forEach(b=>b.classList.toggle('active',b.dataset.v2tab===name));
+ document.querySelectorAll('.v2-sideitem[data-v2tab]').forEach(b=>b.classList.toggle('active',b.dataset.v2tab===name));
  document.querySelectorAll('.v2-panel').forEach(p=>p.classList.toggle('active',p.id==='v2'+name));
- const titles={home:'Dengarkan tanpa batas.',youtube:'YouTube Player',library:'Library lokal',saved:'Musik disukai'};
+ const titles={home:'Dengarkan tanpa batas.',library:'Library lokal',saved:'Musik disukai'};
  $('v2Heading').textContent=titles[name]||'NOIR Dashboard v2';
  if(name==='library'||name==='saved')v2RenderLocal();
 }
 function v2RenderLocal(){
  const local=$('v2LocalTracks'),saved=$('v2SavedTracks'),home=$('v2HomeTracks');[local,saved,home].forEach(n=>n.innerHTML='');
- const make=(t,compact=false)=>{const row=document.createElement('div');row.className=compact?'v2-track-card':'v2-local-row';const art=document.createElement('div');art.className='v2-track-art';art.textContent=t.title;art.setAttribute('aria-label','Cover '+t.title);const info=document.createElement('div');info.className=compact?'':'v2-rowinfo';const b=document.createElement('b');b.textContent=t.title;const sm=document.createElement('small');sm.textContent=t.artist||'Tidak diketahui';info.append(b,sm);const play=document.createElement('button');play.textContent=compact?'▶':'Putar lokal';play.onclick=()=>{setCurrent(t,true);$('v2NowTitle').textContent=t.title;$('v2NowSub').textContent=(t.artist||'Artis tidak diketahui')+' · Koleksi NOIR';};row.append(art,info,play);return row};
+ const make=(t,compact=false)=>{const row=document.createElement('div');row.className=compact?'v2-track-card':'v2-local-row';const art=document.createElement('div');art.className='v2-track-art';art.textContent=t.title;art.setAttribute('aria-label','Cover '+t.title);const info=document.createElement('div');info.className=compact?'':'v2-rowinfo';const b=document.createElement('b');b.textContent=t.title;const sm=document.createElement('small');sm.textContent=t.artist||'Tidak diketahui';info.append(b,sm);const play=document.createElement('button');play.textContent=compact?'▶':'Putar lokal';play.onclick=()=>{setCurrent(t,true);$('v2AudioTitle').textContent=t.title;$('v2AudioArtist').textContent=t.artist||'Artis tidak diketahui';};row.append(art,info,play);return row};
  tracks.forEach(t=>{local.append(make(t));home.append(make(t,true));if(savedIds.has(t.id))saved.append(make(t))});
  $('v2LibraryCount').textContent=tracks.length+' TRACKS';
  if(!tracks.length)local.innerHTML='<p class="hint">Belum ada musik lokal.</p>';
  if(!saved.children.length)saved.innerHTML='<p class="hint">Belum ada musik yang disukai.</p>';
 }
-function v2Share(){
- if(!v2Current){toast('Pilih video YouTube dulu untuk dibagikan.');return}
- const shareUrl=v2Current.url;
- if(navigator.share){navigator.share({title:'NOIR · '+v2Current.title,text:'Dengarkan video ini melalui NOIR Dashboard v2',url:shareUrl}).catch(()=>{});}
- else if(navigator.clipboard?.writeText){navigator.clipboard.writeText(shareUrl).then(()=>toast('Link YouTube disalin.')).catch(()=>toast('Gagal menyalin link.'));}
- else{prompt('Salin link ini:',shareUrl)}
-}
 $('openV2').onclick=()=>{history.pushState({noirV2:true},'',location.href);document.body.classList.add('v2-mode');$('menuPopup').classList.remove('open');$('dashboardV2').classList.add('active');v2RenderLocal();v2Tab('home')};
 $('backMain').onclick=()=>{if(history.state&&history.state.noirV2)history.back();else exitV2ToMain()};
 function exitV2ToMain(){document.body.classList.remove('v2-mode');$('dashboardV2').classList.remove('active');showView('player')}
-window.addEventListener('popstate',()=>{if(document.body.classList.contains('v2-mode'))exitV2ToMain()});
-document.querySelectorAll('.v2-sideitem').forEach(b=>b.onclick=()=>v2Tab(b.dataset.v2tab));
-$('goYoutube').onclick=()=>v2Tab('youtube');
-$('v2LoadYoutube').onclick=()=>v2PlayYoutube($('v2YoutubeUrl').value,'YouTube video');
-$('v2PlayPause').onclick=v2TogglePlay;
+window.addEventListener('popstate',e=>{
+ if($('noirShortsViewer').classList.contains('open')){noirShortsClose(true);return;}
+ if(document.body.classList.contains('v2-mode'))exitV2ToMain();
+});
+document.querySelectorAll('.v2-sideitem[data-v2tab]').forEach(b=>b.onclick=()=>v2Tab(b.dataset.v2tab));
+$('goShorts').onclick=noirShortsOpen;
+$('openShortsMenu').onclick=noirShortsOpen;
+$('openShortsMain').onclick=()=>{$('menuPopup').classList.remove('open');noirShortsOpen();};
+$('noirShortsClose').onclick=()=>noirShortsClose(false);
+$('noirShortsPlay').onclick=noirShortsPlay;
+$('noirShortsNext').onclick=()=>noirShortsNext(1);
+$('noirShortsPrev').onclick=()=>noirShortsNext(-1);
+const shortsStage=$('noirShortsViewer');
+shortsStage.addEventListener('touchstart',e=>{if(!shortsStage.classList.contains('open'))return;noirShortsTouchY=e.touches[0].clientY;noirShortsTouchX=e.touches[0].clientX;},{passive:true});
+shortsStage.addEventListener('touchend',e=>{if(!shortsStage.classList.contains('open'))return;const dy=e.changedTouches[0].clientY-noirShortsTouchY,dx=e.changedTouches[0].clientX-noirShortsTouchX;if(Math.abs(dy)>Math.abs(dx)&&Math.abs(dy)>35){noirShortsMovedAt=Date.now();noirShortsHandleGesture(dy);}},{passive:true});
 
+shortsStage.addEventListener('wheel',e=>{if(!shortsStage.classList.contains('open'))return;e.preventDefault();const now=Date.now();if(now-noirShortsWheelLock<500)return;noirShortsWheelLock=now;noirShortsHandleGesture(e.deltaY);},{passive:false});
+document.addEventListener('keydown',e=>{if(!$('noirShortsViewer').classList.contains('open'))return;if(e.key==='Escape'){noirShortsClose(false);e.preventDefault()}else if(e.key==='ArrowDown'){noirShortsNext(1);e.preventDefault()}else if(e.key==='ArrowUp'){noirShortsNext(-1);e.preventDefault()}});
+noirShortsLoadApi();
 $('v2AudioPlay').onclick=toggle;
 $('v2AudioBack').onclick=()=>jump(-10);
 $('v2AudioNext').onclick=()=>jump(10);
@@ -371,17 +423,6 @@ audio.addEventListener('timeupdate',()=>{if(current&&current.kind==='audio'&&aud
 audio.addEventListener('play',()=>{$('v2AudioPlay').textContent='Ⅱ'});
 audio.addEventListener('pause',()=>{$('v2AudioPlay').textContent='▶'});
 
-$('v2ShowVideo').onclick=()=>{if(!v2PlayerWrap){v2MountPlayer();}v2PlayerWrap.classList.remove('v2-video-collapsed');$('v2ShowVideo').textContent='Video ditampilkan';v2PlayerWrap.scrollIntoView({behavior:'smooth',block:'center'});};
-$('v2Progress').addEventListener('input',()=>{v2Seeking=true;const dur=v2YTPlayer?.getDuration?.()||0;if(dur>0){const t=(Number($('v2Progress').value)/1000)*dur;$('v2Elapsed').textContent=v2FormatTime(t);}});
-$('v2Progress').addEventListener('change',()=>{const dur=v2YTPlayer?.getDuration?.()||0;if(dur>0)v2YTPlayer.seekTo((Number($('v2Progress').value)/1000)*dur,true);v2Seeking=false;});
-v2MountPlayer();v2LoadApi();v2PollProgress();
-$('v2YoutubeUrl').addEventListener('keydown',e=>{if(e.key==='Enter')v2PlayYoutube(e.target.value,'YouTube video')});
-$('v2Share').onclick=v2Share;
-$('v2SearchBtn').onclick=()=>{const q=$('v2Search').value.trim();if(!q){toast('Masukkan judul lagu atau artis.');return}window.open('https://www.youtube.com/results?search_query='+encodeURIComponent(q),'_blank','noopener')};
-$('v2Search').addEventListener('keydown',e=>{if(e.key==='Enter')$('v2SearchBtn').click()});
-$('v2OpenSearch').onclick=()=>{$('v2Search').focus();v2Tab('home')};
-$('v2SearchBtn').setAttribute('aria-label','Cari di YouTube');
-v2RenderQueue();
 
 init();
 </script>
